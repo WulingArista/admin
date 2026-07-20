@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Admin Panel Wuling</title>
+  <meta name="theme-color" content="#1e293b">
+  <style>
+    body, html {
+      margin: 0; padding: 0;
+      height: 100%; width: 100%;
+      overflow: hidden;
+      background-color: #f1f5f9;
+    }
+
+    #layar-loading {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: #1e293b;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-family: sans-serif;
+      transition: opacity 0.5s ease;
+    }
+
+    #layar-error {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: #1e293b;
+      z-index: 99998;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-family: sans-serif;
+      text-align: center;
+      padding: 30px;
+      box-sizing: border-box;
+    }
+
+    .spinner {
+      border: 4px solid rgba(255,255,255,0.2);
+      border-top: 4px solid #38bdf8;
+      border-radius: 50%;
+      width: 45px; height: 45px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 15px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .hide-banner {
+      width: 100%;
+      height: 100vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .hide-banner iframe {
+      width: 100%;
+      height: calc(100vh + 35px);
+      border: none;
+      margin-top: -35px;
+      display: block;
+    }
+
+    .error-icon  { font-size: 56px; margin-bottom: 16px; }
+    .error-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    .error-msg   { font-size: 14px; color: #94a3b8; line-height: 1.6; }
+    .error-code  {
+      margin-top: 20px;
+      background: #0f172a;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #f97316;
+      letter-spacing: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loading Screen -->
+  <div id="layar-loading">
+    <div class="spinner"></div>
+    <p id="loading-text" style="font-weight:bold; letter-spacing:1px;">
+      Memuat Panel Admin...
+    </p>
+  </div>
+
+  <!-- Error Screen -->
+  <div id="layar-error">
+    <div class="error-icon">⚠️</div>
+    <div class="error-title">Kode Dealer Tidak Valid</div>
+    <div class="error-msg">
+      Pastikan URL yang Anda gunakan sudah benar.<br>
+      Hubungi administrator sistem jika masalah berlanjut.
+    </div>
+    <div class="error-code" id="error-kode">Kode: -</div>
+  </div>
+
+  <!-- Iframe Container -->
+  <div class="hide-banner" id="iframe-container" style="display:none;">
+    <iframe id="main-frame" onload="hilangkanLoader()" scrolling="yes"></iframe>
+  </div>
+
+  <script>
+    // ============================================================
+    // KONFIGURASI PUSAT — sama dengan booking/index.html
+    // ============================================================
+    const CONFIG_URL = 'https://raw.githubusercontent.com/WulingArista/dealer-config/main/config.json';
+
+    // ============================================================
+    // MAIN LOGIC
+    // ============================================================
+    (function() {
+      const params     = new URLSearchParams(window.location.search);
+      const kodeDealer = (params.get('dealer') || '').toUpperCase().trim();
+
+      if (!kodeDealer) {
+        tampilkanError('TIDAK ADA');
+        return;
+      }
+
+      fetch(CONFIG_URL + '?t=' + Date.now())
+        .then(function(res) {
+          if (!res.ok) throw new Error('Gagal fetch config');
+          return res.json();
+        })
+        .then(function(config) {
+          const dealer = config[kodeDealer];
+
+          if (!dealer || !dealer.gasUrl) {
+            tampilkanError(kodeDealer);
+            return;
+          }
+
+          // Update title
+          document.title = 'Admin Panel - ' + dealer.nama;
+          document.getElementById('loading-text').textContent =
+            'Memuat Admin ' + dealer.nama + '...';
+
+          // Load iframe — arahkan ke ?page=admin di GAS
+          var frame = document.getElementById('main-frame');
+          frame.src = dealer.gasUrl + '?page=admin';
+
+          document.getElementById('iframe-container').style.display = 'block';
+        })
+        .catch(function(err) {
+          console.error('Config error:', err);
+          tampilkanError(kodeDealer);
+        });
+    })();
+
+    function hilangkanLoader() {
+      var loader = document.getElementById('layar-loading');
+      if (loader) {
+        loader.style.opacity = '0';
+        setTimeout(function() { loader.style.display = 'none'; }, 500);
+      }
+    }
+
+    function tampilkanError(kode) {
+      document.getElementById('layar-loading').style.display = 'none';
+      document.getElementById('error-kode').textContent = 'Kode: ' + kode;
+      document.getElementById('layar-error').style.display = 'flex';
+    }
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('./sw.js').catch(function(err) {
+          console.log('PWA Gagal', err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
