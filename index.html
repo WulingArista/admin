@@ -149,7 +149,7 @@
 
   <!-- Iframe Container -->
   <div class="hide-banner" id="iframe-container" style="display:none;">
-    <iframe id="main-frame" onload="hilangkanLoader()" scrolling="yes"></iframe>
+    <iframe id="main-frame" scrolling="yes"></iframe>
   </div>
 
   <script>
@@ -190,6 +190,7 @@
 
           // Load iframe — arahkan ke ?page=admin di GAS
           var frame = document.getElementById('main-frame');
+          frame.onload = hilangkanLoader;
           frame.src = dealer.gasUrl + '?page=admin';
 
           document.getElementById('iframe-container').style.display = 'block';
